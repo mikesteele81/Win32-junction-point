@@ -28,14 +28,14 @@ Description:
   (4) <http://www.codeproject.com/KB/winsdk/junctionpoints.aspx>
 License:       BSD3
 License-file:  LICENSE
-Author:        Michael Steele, Mike Nordell
+Author:        Michael Steele
 Maintainer:    mikesteele81@gmail.com
-Copyright:     Michael Steele
+Copyright:     Copyright (c) 2011, Michael Steele. Copyright (c) 2000, Mikael Nordell
 Category:      System
 Build-type:    Simple
--- Extra-source-files:
 Cabal-version: >=1.2
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
+Stability:     experimental
 
 Library
   Exposed-modules: System.Win32.JunctionPoint
