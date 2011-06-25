@@ -26,13 +26,14 @@ Description:
   [Mike Nordell] <http://www.codeproject.com/Members/Mike-Nordell>
 License:       BSD3
 License-file:  LICENSE
-Author:        Michael Steele
+Author:        Michael Steele, Mike Nordell
 Maintainer:    mikesteele81@gmail.com
--- Copyright:
+Copyright:     Michael Steele
 Category:      System
 Build-type:    Simple
 -- Extra-source-files:
 Cabal-version: >=1.2
+Homepage:      http://github.com/mikesteele81/Win32-junction-point
 
 Library
   Exposed-modules: System.Win32.JunctionPoint
@@ -46,5 +47,4 @@ Library
 
   -- Extra tools (e.g. alex, hsc2hs, ...) needed to build the source.
   -- Build-tools:
-  Ghc-Options: -O2 -funbox-strict-fields -threaded -msse2
-               -Wall -Werror
+  Ghc-Options: -funbox-strict-fields -Wall
