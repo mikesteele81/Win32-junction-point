@@ -1,4 +1,4 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE CPP #-}
 
 module System.Win32.JunctionPoint
     ( createJunctionPoint
@@ -61,6 +61,12 @@ mAXIMUM_REPARSE_DATA_BUFFER_SIZE = 16 * 1024
 -- header. This is used in setReparsePoint.
 tMN_REPARSE_DATA_BUFFER_HEADER_SIZE :: DWORD
 tMN_REPARSE_DATA_BUFFER_HEADER_SIZE = 8
+
+-- I've seen this defined as FIELD_OFFSET(REPARSE_GUID_DATA_BUFFER, GenericReparseBuffer)
+-- All the struct members up to the genericreparsebuffer add up to 24. I'm guessing that
+-- the size-1 byte array does not add to this count.
+rEPARSE_GUID_DATA_BUFFER_HEADER_SIZE :: DWORD
+rEPARSE_GUID_DATA_BUFFER_HEADER_SIZE = 24
 
 -- C structure. This is not documented in current versions of the
 -- Windows SDK.
@@ -125,9 +131,6 @@ instance Storable TMN_REPARSE_DATA_BUFFER where
 -- used for querying existing reparse points.
 data REPARSE_GUID_DATA_BUFFER = REPARSE_GUID_DATA_BUFFER
     { _rgdb_ReparseTag :: DWORD
-    -- Bytes used by _rgdb_DataBuffer. Contrast this with TMN_REPARSE_DATA_BUFFER.
-    , _rgdb_ReparseDataLength :: !WORD
-    , _rgdb_Reserved          :: !WORD
     -- MS specifies an odd structure, but a GUID is really just a 128-bit
     -- value.
     , _rgdb_GUID1             :: !DWORD
@@ -137,38 +140,33 @@ data REPARSE_GUID_DATA_BUFFER = REPARSE_GUID_DATA_BUFFER
     -- The C struct indicates a single-element array.
     -- Actually, we need to allocate enough memory to
     -- hold a string here.
-    , _rgdb_DataBuffer :: !(Ptr BYTE)
+    , _rgdb_DataBuffer :: [BYTE]
     }
 
-instance Storable REPARSE_GUID_DATA_BUFFER where
-  -- Storable does not allow the pokes of different sizes, so we're just
-  -- allocating the maximum size Microsoft documents.
-  sizeOf _ = mAXIMUM_REPARSE_DATA_BUFFER_SIZE
-  alignment _ = 1 -- no alignment? I don't know what this means.
-  peek ptr = do
-    _rgdb_ReparseTag        <- peek . castPtr $ ptr
-    _rgdb_ReparseDataLength <- castPtr ptr `peekByteOff` 4
-    _rgdb_Reserved          <- castPtr ptr `peekByteOff` 6
-    _rgdb_GUID1             <- castPtr ptr `peekByteOff` 8
-    _rgdb_GUID2             <- castPtr ptr `peekByteOff` 12
-    _rgdb_GUID3             <- castPtr ptr `peekByteOff` 16
-    _rgdb_GUID4             <- castPtr ptr `peekByteOff` 20
-    let dataBuffer           = castPtr ptr `plusPtr`     24
+peekREPARSE_GUID_DATA_BUFFER :: Ptr REPARSE_GUID_DATA_BUFFER -> IO REPARSE_GUID_DATA_BUFFER
+peekREPARSE_GUID_DATA_BUFFER ptr = do
+    _rgdb_ReparseTag <- peek . castPtr $ ptr
+    dataLength       <- (castPtr ptr :: Ptr WORD) `peekByteOff` 4
+    -- reserved WORD at byte 6
+    _rgdb_GUID1      <- castPtr ptr `peekByteOff` 8
+    _rgdb_GUID2      <- castPtr ptr `peekByteOff` 12
+    _rgdb_GUID3      <- castPtr ptr `peekByteOff` 16
+    _rgdb_GUID4      <- castPtr ptr `peekByteOff` 20
+    dataBuffer       <- peekArray dataLength (castPtr ptr `plusPtr` 24)
     return $ REPARSE_GUID_DATA_BUFFER _rgdb_ReparseTag
-           _rgdb_ReparseDataLength _rgdb_Reserved _rgdb_GUID1 _rgdb_GUID2
-           _rgdb_GUID3 _rgdb_GUID4 dataBuffer
-  poke ptr rdb = do
+           _rgdb_GUID1 _rgdb_GUID2 _rgdb_GUID3 _rgdb_GUID4 dataBuffer
+
+pokeREPARSE_GUID_DATA_BUFFER :: Ptr REPARSE_GUID_DATA_BUFFER -> REPARSE_GUID_DATA_BUFFER -> IO ()
+pokeREPARSE_GUID_DATA_BUFFER ptr rdb = do
     castPtr ptr `poke` _rgdb_ReparseTag rdb
-    castPtr ptr `pokeByteOff` 4  $ _rgdb_ReparseDataLength rdb
-    castPtr ptr `pokeByteOff` 6  $ _rgdb_Reserved rdb
+    castPtr ptr `pokeByteOff` 4  $ (fromIntegral dataLength :: WORD)
     castPtr ptr `pokeByteOff` 8  $ _rgdb_GUID1 rdb
     castPtr ptr `pokeByteOff` 12 $ _rgdb_GUID2 rdb
     castPtr ptr `pokeByteOff` 16 $ _rgdb_GUID3 rdb
     castPtr ptr `pokeByteOff` 20 $ _rgdb_GUID4 rdb
-    buffer <- peekArray bufferSize (_rgdb_DataBuffer rdb)
-    plusPtr ptr 24 `pokeArray` buffer
+    pokeArray (castPtr ptr `plusPtr` 24) $ _rgdb_DataBuffer rdb
     where
-      bufferSize = fromIntegral $ _rgdb_ReparseDataLength rdb - 24
+      dataLength = length $ _rgdb_DataBuffer rdb
 
 withTMN_REPARSE_DATA_BUFFER :: Text
     -> (Ptr TMN_REPARSE_DATA_BUFFER -> IO a) -> IO a
@@ -190,18 +188,18 @@ withTMN_REPARSE_DATA_BUFFER dst f =
 withREPARSE_GUID_DATA_BUFFER :: [BYTE]
     -> (Ptr REPARSE_GUID_DATA_BUFFER -> IO a) -> IO a
 withREPARSE_GUID_DATA_BUFFER bx f =
-    withArray bx $ \dataBuffer ->
-    with (REPARSE_GUID_DATA_BUFFER
-          { _rgdb_ReparseTag = iO_REPARSE_TAG_MOUNT_POINT
-          -- must be 0 when deleting a junction point
-          , _rgdb_ReparseDataLength = 0
-          , _rgdb_Reserved = 0
-          , _rgdb_GUID1 = 0
-          , _rgdb_GUID2 = 0
-          , _rgdb_GUID3 = 0
-          , _rgdb_GUID4 = 0
-          , _rgdb_DataBuffer = dataBuffer
-          }) f
+    allocaBytes (fromIntegral rEPARSE_GUID_DATA_BUFFER_HEADER_SIZE + length bx) $ \prgdb -> do
+    pokeREPARSE_GUID_DATA_BUFFER prgdb
+        $ REPARSE_GUID_DATA_BUFFER
+              { _rgdb_ReparseTag = iO_REPARSE_TAG_MOUNT_POINT
+              , _rgdb_GUID1 = 0
+              , _rgdb_GUID2 = 0
+              , _rgdb_GUID3 = 0
+              , _rgdb_GUID4 = 0
+              -- must be empty when deleting a junction point
+              , _rgdb_DataBuffer = bx
+              }
+    f prgdb
 
 -- | Create a junction point between two folders on the same filesystem.
 --
@@ -276,7 +274,7 @@ deleteReparsePoint handle =
     with (0 :: DWORD) $ \bytesReturned -> do
         deviceIoControl handle fSCTL_DELETE_REPARSE_POINT
             (Just $ castPtr pRgdb)
-            tMN_REPARSE_DATA_BUFFER_HEADER_SIZE
+            rEPARSE_GUID_DATA_BUFFER_HEADER_SIZE
             Nothing 0 (Just bytesReturned) Nothing
 
 -- Open a reparse point attached to the supplied folder. An exception will be
@@ -302,7 +300,11 @@ deviceIoControl hDevice dwIoControlCode lpInBuffer nInBufferSize
             (maybe nullPtr id lpBytesReturned)
             (maybe nullPtr id lpOverlapped)
 
-foreign import stdcall unsafe "windows.h DeviceIoControl"
+#ifdef WIN64
+foreign import "windows.h DeviceIoControl"
+#else
+foreign import stdcall "windows.h DeviceIoControl"
+#endif
     c_DeviceIoControl :: HANDLE -> DWORD -> LPVOID -> DWORD -> LPVOID
         -> DWORD -> LPDWORD -> LPOVERLAPPED -> IO Bool
 
