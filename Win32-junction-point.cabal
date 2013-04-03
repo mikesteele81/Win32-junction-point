@@ -48,8 +48,14 @@ Category:      System
 Build-type:    Simple
 Cabal-version: >=1.14
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
+bug-reports:   http://github.com/mikesteele81/win32-junction-point/issues
+
 Stability:     experimental
 tested-with:   GHC==7.4.2, GHC==7.6.2
+
+source-repository head
+  type: git
+  location: git://github.com/mikesteele81/win32-junction-point.git
 
 Library
   default-language: Haskell2010
@@ -58,9 +64,7 @@ Library
   Build-depends: base  >= 4.0
                , text
                , Win32
+  ghc-options: -funbox-strict-fields -Wall
   if arch(x86_64)
     cpp-options: -DWIN64
-    ghc-options: -funbox-strict-fields -Wall -DWIN64
 
-  else
-    ghc-options: -funbox-strict-fields -Wall
