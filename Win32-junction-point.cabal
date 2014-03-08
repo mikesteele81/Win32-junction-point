@@ -49,9 +49,10 @@ Build-type:    Simple
 Cabal-version: >=1.14
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
 bug-reports:   http://github.com/mikesteele81/win32-junction-point/issues
-
 Stability:     experimental
 tested-with:   GHC==7.4.2, GHC==7.6.2
+extra-source-files:
+    include/windows_cconv.h
 
 source-repository head
   type: git
@@ -65,6 +66,4 @@ Library
                , text
                , Win32
   ghc-options: -funbox-strict-fields -Wall
-  if arch(x86_64)
-    cpp-options: -DWIN64
-
+  include-dirs: include

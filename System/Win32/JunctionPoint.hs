@@ -16,6 +16,8 @@ import Foreign
 import Foreign.C
 import System.Win32 hiding (createFile)
 
+#include "windows_cconv.h"
+
 -- Macro taken from winioctl.h
 -- #define CTL_CODE( DeviceType, Function, Method, Access) ( \
 --     (DWORD) ((DeviceType) << 16 | ((Access) << 14) | ((Function) << 2) \
@@ -300,11 +302,7 @@ deviceIoControl hDevice dwIoControlCode lpInBuffer nInBufferSize
             (maybe nullPtr id lpBytesReturned)
             (maybe nullPtr id lpOverlapped)
 
-#ifdef WIN64
-foreign import "windows.h DeviceIoControl"
-#else
-foreign import stdcall "windows.h DeviceIoControl"
-#endif
+foreign import WINDOWS_CCONV "windows.h DeviceIoControl"
     c_DeviceIoControl :: HANDLE -> DWORD -> LPVOID -> DWORD -> LPVOID
         -> DWORD -> LPDWORD -> LPOVERLAPPED -> IO Bool
 
@@ -313,7 +311,7 @@ createFile :: Text -> AccessMode -> ShareMode -> Maybe LPSECURITY_ATTRIBUTES
 createFile name access share mb_attr mode flag mb_h =
     -- simply converting Text to a name does not add a null character
     useAsPtr0 name $ \ c_name ->
-    failIf (==iNVALID_HANDLE_VALUE) (unwords ["CreateFile", show name]) $
+    failIf (== iNVALID_HANDLE_VALUE) (unwords ["CreateFile", show name]) $
     c_CreateFile c_name access share (maybePtr mb_attr) mode flag (maybePtr mb_h)
 
 -- | useAsPtr returns a length and byte buffer, but all the win32 functions
