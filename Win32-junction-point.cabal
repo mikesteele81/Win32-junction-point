@@ -1,5 +1,5 @@
 Name:          Win32-junction-point
-Version:       0.1
+Version:       0.2
 Synopsis:      Support for manipulating NTFS junction points.
 Description:
   This package provides the ability to manipulate NTFS junction points as
@@ -19,19 +19,6 @@ Description:
   It is against Microsoft's recommendation to make use of undocumented API
   features. Use this library at your own risk.
   .
-  Release Notes:
-  .
-  Changes in 0.1
-  .
-  * 64-bit GHC is now supported.
-  .
-  * Update cabal file to build on recent versions of GHC.
-  .
-  * An internal foreign import is now being called with the "safe" option.
-  .
-  * bug fixes. The deleteJunctionPoint function was failing to delete junction
-    points in many cases.
-  .
   (1) <http://support.microsoft.com/?kbid=205524>
   .
   (2) <http://technet.microsoft.com/en-us/sysinternals/bb896768>
@@ -43,16 +30,17 @@ License:       BSD3
 License-file:  LICENSE
 Author:        Michael Steele
 Maintainer:    mikesteele81@gmail.com
-Copyright:     Copyright (c) 2011-2013, Michael Steele. Copyright (c) 2000, Mikael Nordell
+Copyright:     Copyright (c) 2011-2014, Michael Steele. Copyright (c) 2000, Mikael Nordell
 Category:      System
 Build-type:    Simple
-Cabal-version: >=1.14
+Cabal-version: >=1.16
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
 bug-reports:   http://github.com/mikesteele81/win32-junction-point/issues
 Stability:     experimental
-tested-with:   GHC==7.4.2, GHC==7.6.2
+tested-with:   GHC==7.8.2
 extra-source-files:
     include/windows_cconv.h
+    ChangeLog
 
 source-repository head
   type: git
@@ -60,10 +48,12 @@ source-repository head
 
 Library
   default-language: Haskell2010
+  ghc-options: -Wall -funbox-strict-fields
+  cc-options:  -fno-strict-aliasing
   Exposed-modules: System.Win32.JunctionPoint
 
-  Build-depends: base  >= 4.0 && < 5
-               , text
-               , Win32
-  ghc-options: -funbox-strict-fields -Wall
+  Build-depends: base  >= 4.0 && < 4.8
+               , text  >= 0.8 && < 1.2
+               , Win32 >= 2.0 && < 2.4
+               , Win32-errors >= 0.2 && < 0.3
   include-dirs: include

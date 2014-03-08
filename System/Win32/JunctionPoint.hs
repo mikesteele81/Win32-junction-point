@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module System.Win32.JunctionPoint
     ( createJunctionPoint
@@ -14,7 +15,10 @@ import qualified Data.Text as T
 import Data.Text.Foreign
 import Foreign
 import Foreign.C
-import System.Win32 hiding (createFile)
+import System.Win32 hiding (createFile, failIf, failIfFalse_)
+import System.Win32.Error
+import System.Win32.Error.Foreign
+
 
 #include "windows_cconv.h"
 
@@ -222,16 +226,17 @@ createJunctionPoint mountDir destDir =
     bracket (openReparseHandle mountDir) closeHandle $ \handle ->
     setReparsePoint handle rdb
 
--- | This "Deletes" the junction point at the supplied path. On success an
--- empty folder will be left in its place.
+-- | This "Deletes" the junction point at the supplied path. An
+-- empty folder will be left in its place on success. A 'Win32Exception'
+-- exception will be thrown in the event of an error condition.
 deleteJunctionPoint :: Text -> IO ()
 deleteJunctionPoint dir =
     bracket (openReparseHandle dir) closeHandle $ \handle -> do
         deleteReparsePoint handle
 
--- | Discover the target of a junction point at the supplied path. An
--- exception will be raised if the target is either invalid or not a junction
--- point. The returned path will be prefixed by \"\\??\\\".
+-- | Discover the target of a junction point at the supplied path. A
+-- 'Win32Exception' exception will be thrown if the target is either invalid
+-- or not a junction point. The returned path will be prefixed by \"\\??\\\".
 getJunctionPointInfo :: Text -> IO Text
 getJunctionPointInfo dir =
     bracket (openReparseHandle dir) closeHandle $ \handle ->
@@ -279,8 +284,8 @@ deleteReparsePoint handle =
             rEPARSE_GUID_DATA_BUFFER_HEADER_SIZE
             Nothing 0 (Just bytesReturned) Nothing
 
--- Open a reparse point attached to the supplied folder. An exception will be
--- raised if the target does not exist, the user does not have read
+-- Open a reparse point attached to the supplied folder. A `Win32Error` exception
+-- will be thrown if the target does not exist, the user does not have read
 -- permissions to it, or the target does not have a reparse point attached.
 openReparseHandle :: Text -> IO HANDLE
 openReparseHandle path = createFile path (gENERIC_READ .|. gENERIC_WRITE)
@@ -294,8 +299,7 @@ deviceIoControl :: HANDLE -> DWORD -> Maybe LPVOID -> DWORD -> Maybe LPVOID
     -> DWORD -> Maybe LPDWORD -> Maybe LPOVERLAPPED -> IO ()
 deviceIoControl hDevice dwIoControlCode lpInBuffer nInBufferSize
     lpOutBuffer nOutBufferSize lpBytesReturned lpOverlapped =
-    failIfFalse_ (unwords [ "DeviceIoControl", show hDevice
-                          , show dwIoControlCode]) $
+    failIfFalse_ "DeviceIoControl" $
         c_DeviceIoControl hDevice dwIoControlCode
             (maybe nullPtr id lpInBuffer) nInBufferSize
             (maybe nullPtr id lpOutBuffer) nOutBufferSize
@@ -306,12 +310,13 @@ foreign import WINDOWS_CCONV "windows.h DeviceIoControl"
     c_DeviceIoControl :: HANDLE -> DWORD -> LPVOID -> DWORD -> LPVOID
         -> DWORD -> LPDWORD -> LPOVERLAPPED -> IO Bool
 
+-- | Check MSDN documentation for what this action does.
 createFile :: Text -> AccessMode -> ShareMode -> Maybe LPSECURITY_ATTRIBUTES
     -> CreateMode -> FileAttributeOrFlag -> Maybe HANDLE -> IO HANDLE
 createFile name access share mb_attr mode flag mb_h =
     -- simply converting Text to a name does not add a null character
     useAsPtr0 name $ \ c_name ->
-    failIf (== iNVALID_HANDLE_VALUE) (unwords ["CreateFile", show name]) $
+    failIf (== iNVALID_HANDLE_VALUE) "CreateFile" $
     c_CreateFile c_name access share (maybePtr mb_attr) mode flag (maybePtr mb_h)
 
 -- | useAsPtr returns a length and byte buffer, but all the win32 functions

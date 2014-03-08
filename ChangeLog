@@ -1,0 +1,12 @@
+## Changes in 0.2
+
+* Depend on Win32-errors for error handling.
+* More strict package dependencies
+
+## Changes in 0.1
+
+* 64-bit GHC is now supported.
+* Update cabal file to build on recent versions of GHC.
+* An internal foreign import is now being called with the "safe" option.
+* bug fixes. The deleteJunctionPoint function was failing to delete junction
+  points in many cases.
