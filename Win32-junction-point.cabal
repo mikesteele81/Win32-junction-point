@@ -30,7 +30,7 @@ License:       BSD3
 License-file:  LICENSE
 Author:        Michael Steele
 Maintainer:    mikesteele81@gmail.com
-Copyright:     Copyright (c) 2011-2014, Michael Steele. Copyright (c) 2000, Mikael Nordell
+Copyright:     Copyright (c) 2011-2015, Michael Steele. Copyright (c) 2000, Mikael Nordell
 Category:      System
 Build-type:    Simple
 Cabal-version: >=1.16
