@@ -37,7 +37,7 @@ Cabal-version: >=1.16
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
 bug-reports:   http://github.com/mikesteele81/win32-junction-point/issues
 Stability:     experimental
-tested-with:   GHC==7.8.2
+tested-with:   GHC==7.8.3
 extra-source-files:
     include/windows_cconv.h
     ChangeLog
