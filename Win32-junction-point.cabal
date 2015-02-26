@@ -1,5 +1,5 @@
 Name:          Win32-junction-point
-Version:       0.2
+Version:       0.2.1
 Synopsis:      Support for manipulating NTFS junction points.
 Description:
   This package provides the ability to manipulate NTFS junction points as
