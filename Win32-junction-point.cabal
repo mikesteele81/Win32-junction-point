@@ -1,5 +1,5 @@
 Name:          Win32-junction-point
-Version:       0.2.1
+Version:       0.2.1.1
 Synopsis:      Support for manipulating NTFS junction points.
 Description:
   This package provides the ability to manipulate NTFS junction points as
@@ -37,7 +37,7 @@ Cabal-version: >=1.16
 Homepage:      http://github.com/mikesteele81/Win32-junction-point
 bug-reports:   http://github.com/mikesteele81/win32-junction-point/issues
 Stability:     experimental
-tested-with:   GHC==7.8.3
+tested-with:   GHC == 7.8.3, GHC == 7.10.1
 extra-source-files:
     include/windows_cconv.h
     ChangeLog
